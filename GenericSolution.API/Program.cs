@@ -1,4 +1,5 @@
 using GenericSolution.DataAccess;
+using GenericSolution.Domain;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,6 +54,21 @@ app.MapGet("/clientes", (DataContext context) =>
     return clientes;
 })
 .WithName("GetClientes");
+
+app.MapGet("/clientes/{id}", (DataContext context, int id) =>
+{
+    var cliente =  context.Clientes.Find(id);
+    return cliente;
+})
+.WithName("GetClienteById");
+
+app.MapPost("/clientes", (DataContext context, Cliente cliente) =>
+{
+    context.Clientes.Add(cliente);
+    context.SaveChanges();
+    return cliente;
+})
+.WithName("CreateCliente");
 
 app.Run();
 
