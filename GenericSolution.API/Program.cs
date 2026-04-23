@@ -10,7 +10,15 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Register the Swagger generator
+builder.Services.AddSwaggerGen(); 
+
 var app = builder.Build();
+
+    // Enable middleware to serve generated Swagger as a JSON endpoint
+    app.UseSwagger();
+    // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.)
+    app.UseSwaggerUI();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
