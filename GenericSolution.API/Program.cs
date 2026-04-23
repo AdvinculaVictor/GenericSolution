@@ -47,6 +47,13 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
+app.MapGet("/clientes", (DataContext context) =>
+{
+    var clientes =  context.Clientes.ToList();
+    return clientes;
+})
+.WithName("GetClientes");
+
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
