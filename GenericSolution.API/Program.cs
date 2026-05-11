@@ -4,6 +4,7 @@ using GenericSolution.Domain;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,7 @@ builder.Services.AddCors(options =>
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
     sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
@@ -32,12 +34,19 @@ builder.Services.AddDbContext<DataContext>(options =>
 //Se inyecta el ScopeHandler de JwtBearer
 builder.Services.AddSingleton<IAuthorizationHandler, ScopeHandler>();
 
+//To publish as AWS Lambda, we need to add the AWS Lambda hosting package and specify the event source as HttpApi (API Gateway). This will allow the application to run as a Lambda function and handle HTTP requests from API Gateway.
+builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
+
 // Register the Swagger generator
-builder.Services.AddSwaggerGen(options => {
-    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme {
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    {
         Type = SecuritySchemeType.OAuth2,
-        Flows = new OpenApiOAuthFlows {
-            AuthorizationCode = new OpenApiOAuthFlow {
+        Flows = new OpenApiOAuthFlows
+        {
+            AuthorizationCode = new OpenApiOAuthFlow
+            {
                 AuthorizationUrl = new Uri($"https://login.microsoftonline.com/33444707-653e-4367-bb8b-1ed2685b6b7c/oauth2/v2.0/authorize"),
                 TokenUrl = new Uri($"https://login.microsoftonline.com/33444707-653e-4367-bb8b-1ed2685b6b7c/oauth2/v2.0/token"),
                 Scopes = new Dictionary<string, string> {
@@ -62,7 +71,23 @@ builder.Services.AddAuthentication(options =>
         options.MapInboundClaims = false;
         options.Authority = builder.Configuration["AuthorizationServer:Authority"];
         options.Audience = builder.Configuration["AuthorizationServer:Audience"];
+        options.MetadataAddress = "https://login.microsoftonline.com/33444707-653e-4367-bb8b-1ed2685b6b7c/.well-known/openid-configuration?appid=272d2080-cc5a-4d08-88c4-901d7658ab7f";
         options.RequireHttpsMetadata = false; // Set to true in production
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine("Exception: " + context.Exception.Message);
+                return Task.CompletedTask;
+            }
+        };
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = builder.Configuration["AuthorizationServer:Authority"],
+            ValidAudience = builder.Configuration["AuthorizationServer:Audience"],
+            ValidateIssuer = true,
+            ValidateIssuerSigningKey = true
+        };
     });
 builder.Services.AddAuthorization(options =>
 {
@@ -76,7 +101,8 @@ var app = builder.Build();
 // Enable middleware to serve generated Swagger as a JSON endpoint
 app.UseSwagger();
 // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.)
-app.UseSwaggerUI(options => {
+app.UseSwaggerUI(options =>
+{
     options.OAuthClientId(builder.Configuration["AzureAd:ClientId"]);
     options.OAuthAppName("Swagger UI");
     options.OAuthUsePkce(); // Recommended for security
