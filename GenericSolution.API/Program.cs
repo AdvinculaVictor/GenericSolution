@@ -163,7 +163,73 @@ app.MapPost("/clientes", (DataContext context, Cliente cliente) =>
 .RequireAuthorization(["ClientesWriteAccess"])
 .WithName("CreateCliente");
 
+app.MapPut("/clientes/{id}", async (DataContext context, int id, Cliente cliente) =>
+{
+    if (cliente.Id != 0 && cliente.Id != id)
+    {
+        return Results.BadRequest();
+    }
+
+    var existing = await context.Clientes.FindAsync(id);
+    if (existing is null)
+    {
+        return Results.NotFound();
+    }
+
+    existing.Nombre = cliente.Nombre;
+    existing.Email = cliente.Email;
+    existing.Domicilio = cliente.Domicilio;
+    existing.CodigoPostal = cliente.CodigoPostal;
+    existing.RFC = cliente.RFC;
+
+    await context.SaveChangesAsync();
+    return Results.Ok(existing);
+})
+.RequireAuthorization(["ClientesWriteAccess"])
+.WithName("UpdateCliente");
+
+app.MapMethods("/clientes/{id}", new[] { "PATCH" }, async (DataContext context, int id, ClientePatch patch) =>
+{
+    var cliente = await context.Clientes.FindAsync(id);
+    if (cliente is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (patch.Nombre is not null)
+    {
+        cliente.Nombre = patch.Nombre;
+    }
+
+    if (patch.Email is not null)
+    {
+        cliente.Email = patch.Email;
+    }
+
+    if (patch.Domicilio is not null)
+    {
+        cliente.Domicilio = patch.Domicilio;
+    }
+
+    if (patch.CodigoPostal is not null)
+    {
+        cliente.CodigoPostal = patch.CodigoPostal;
+    }
+
+    if (patch.RFC is not null)
+    {
+        cliente.RFC = patch.RFC;
+    }
+
+    await context.SaveChangesAsync();
+    return Results.Ok(cliente);
+})
+.RequireAuthorization(["ClientesWriteAccess"])
+.WithName("PatchCliente");
+
 app.Run();
+
+record ClientePatch(string? Nombre, string? Email, string? Domicilio, string? CodigoPostal, string? RFC);
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
