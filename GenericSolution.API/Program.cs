@@ -91,9 +91,10 @@ builder.Services.AddAuthentication(options =>
     });
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("WeatherforecastReadAccess", policy => policy.AddRequirements(new ScopeRequirement("Weatherforecast.Read", builder.Configuration["AuthorizationServer:Authority"])));
-    options.AddPolicy("ClientesReadAccess", policy => policy.AddRequirements(new ScopeRequirement("Clientes.Read", builder.Configuration["AuthorizationServer:Authority"])));
-    options.AddPolicy("ClientesWriteAccess", policy => policy.AddRequirements(new ScopeRequirement("Clientes.Write", builder.Configuration["AuthorizationServer:Authority"])));
+    options.AddPolicy("WeatherforecastReadAccess", policy => policy.AddRequirements(new ScopeRequirement("Weatherforecast.Read", builder.Configuration["AuthorizationServer:Authority"]??"")));
+    options.AddPolicy("ClientesReadAccess", policy => policy.AddRequirements(new ScopeRequirement("Clientes.Read", builder.Configuration["AuthorizationServer:Authority"]??"")));
+    options.AddPolicy("ClientesWriteAccess", policy => policy.AddRequirements(new ScopeRequirement("Clientes.Write", builder.Configuration["AuthorizationServer:Authority"]??"")));
+    options.AddPolicy("Clientes", policy => policy.AddRequirements(new ScopeRequirement("Clientes", builder.Configuration["AuthorizationServer:Authority"]??"")));
 });
 
 var app = builder.Build();
@@ -135,7 +136,7 @@ app.MapGet("/weatherforecast", () =>
         .ToArray();
     return forecast;
 })
-.RequireAuthorization(["WeatherforecastReadAccess"])
+.RequireAuthorization(["WeatherforecastReadAccess", "Clientes"])
 .WithName("GetWeatherForecast");
 
 app.MapGet("/clientes", (DataContext context) =>
@@ -143,7 +144,7 @@ app.MapGet("/clientes", (DataContext context) =>
     var clientes = context.Clientes.ToList();
     return clientes;
 })
-.RequireAuthorization(["ClientesReadAccess"])
+.RequireAuthorization(["ClientesReadAccess","Clientes"])
 .WithName("GetClientes");
 
 app.MapGet("/clientes/{id}", (DataContext context, int id) =>
