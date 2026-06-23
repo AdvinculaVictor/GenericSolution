@@ -152,8 +152,23 @@ app.MapGet("/clientes/{id}", (DataContext context, int id) =>
     var cliente = context.Clientes.Find(id);
     return cliente;
 })
-.RequireAuthorization(["ClientesReadAccess"])
+.RequireAuthorization(["ClientesReadAccess","Clientes"])
 .WithName("GetClienteById");
+
+app.MapDelete("/clientes/{id}", (DataContext context, int id) =>
+{
+    var cliente = context.Clientes.Find(id);
+    if (cliente is null)
+    {
+        return Results.NotFound();
+    }
+
+    context.Clientes.Remove(cliente);
+    context.SaveChanges();
+    return Results.Ok(cliente);
+})
+.RequireAuthorization(["ClientesWriteAccess","Clientes"])
+.WithName("DeleteClienteById");
 
 app.MapPost("/clientes", (DataContext context, Cliente cliente) =>
 {
@@ -161,7 +176,7 @@ app.MapPost("/clientes", (DataContext context, Cliente cliente) =>
     context.SaveChanges();
     return cliente;
 })
-.RequireAuthorization(["ClientesWriteAccess"])
+.RequireAuthorization(["ClientesWriteAccess", "Clientes"])
 .WithName("CreateCliente");
 
 app.MapPut("/clientes/{id}", async (DataContext context, int id, Cliente cliente) =>
@@ -186,7 +201,7 @@ app.MapPut("/clientes/{id}", async (DataContext context, int id, Cliente cliente
     await context.SaveChangesAsync();
     return Results.Ok(existing);
 })
-.RequireAuthorization(["ClientesWriteAccess"])
+.RequireAuthorization(["ClientesWriteAccess", "Clientes"])
 .WithName("UpdateCliente");
 
 app.MapMethods("/clientes/{id}", new[] { "PATCH" }, async (DataContext context, int id, ClientePatch patch) =>
@@ -225,7 +240,7 @@ app.MapMethods("/clientes/{id}", new[] { "PATCH" }, async (DataContext context, 
     await context.SaveChangesAsync();
     return Results.Ok(cliente);
 })
-.RequireAuthorization(["ClientesWriteAccess"])
+.RequireAuthorization(["ClientesWriteAccess", "Clientes"])
 .WithName("PatchCliente");
 
 app.Run();
