@@ -298,6 +298,7 @@ app.MapPut("/categorias/{id}", async (DataContext context, int id, Categoria cat
     }
 
     existing.Nombre = categoria.Nombre;
+    existing.Descripcion = categoria.Descripcion;
 
     await context.SaveChangesAsync();
     return Results.Ok(existing);
@@ -318,6 +319,11 @@ app.MapMethods("/categorias/{id}", new[] { "PATCH" }, async (DataContext context
         categoria.Nombre = patch.Nombre;
     }
 
+    if (patch.Descripcion is not null)
+    {
+        categoria.Descripcion = patch.Descripcion;
+    }
+
     await context.SaveChangesAsync();
     return Results.Ok(categoria);
 })
@@ -327,7 +333,7 @@ app.MapMethods("/categorias/{id}", new[] { "PATCH" }, async (DataContext context
 app.Run();
 
 record ClientePatch(string? Nombre, string? Email, string? Domicilio, string? CodigoPostal, string? RFC);
-record CategoriaPatch(string? Nombre);
+record CategoriaPatch(string? Nombre, string? Descripcion);
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
