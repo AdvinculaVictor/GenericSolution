@@ -8,13 +8,14 @@ namespace GenericSolution.API.Policies
     {
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, ScopeRequirement requirement)
         {
-            var scopeClaim = context.User.Claims.FirstOrDefault(c => (c.Type == "scp"||c.Type == "roles") && c.Issuer == requirement.Issuer);
+            // var scopeClaim = context.User.Claims.FirstOrDefault(c => (c.Type == "scp"||c.Type == "roles") && c.Issuer == requirement.Issuer);
+            var scopeClaims = context.User.Claims.Where(c => (c.Type == "scp" || c.Type == "roles") && c.Issuer == requirement.Issuer);
             var requirements = context.Requirements.OfType<ScopeRequirement>().Where(r => r.Issuer == requirement.Issuer);
             foreach (var req in requirements)
             {
-                if (scopeClaim != null)
+                if (scopeClaims != null)
                 {
-                    var scopes = scopeClaim.Value.Split(' ');
+                    var scopes = scopeClaims.Select(c => c.Value).SelectMany(v => v.Split(' '));
                     if (scopes.Any(s => s.Equals(req.Scope, StringComparison.OrdinalIgnoreCase)))
                     {
                         context.Succeed(requirement);

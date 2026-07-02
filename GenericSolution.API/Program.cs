@@ -95,6 +95,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("ClientesReadAccess", policy => policy.AddRequirements(new ScopeRequirement("Clientes.Read", builder.Configuration["AuthorizationServer:Authority"]??"")));
     options.AddPolicy("ClientesWriteAccess", policy => policy.AddRequirements(new ScopeRequirement("Clientes.Write", builder.Configuration["AuthorizationServer:Authority"]??"")));
     options.AddPolicy("Clientes", policy => policy.AddRequirements(new ScopeRequirement("Clientes", builder.Configuration["AuthorizationServer:Authority"]??"")));
+    options.AddPolicy("Categoria Read", policy => policy.AddRequirements(new ScopeRequirement("Read.Categoria", builder.Configuration["AuthorizationServer:Authority"]??"")));
 });
 
 var app = builder.Build();
@@ -243,9 +244,90 @@ app.MapMethods("/clientes/{id}", new[] { "PATCH" }, async (DataContext context, 
 .RequireAuthorization(["ClientesWriteAccess", "Clientes"])
 .WithName("PatchCliente");
 
+app.MapGet("/categorias", (DataContext context) =>
+{
+    var categorias = context.Categorias.ToList();
+    return categorias;
+})
+.RequireAuthorization(["ClientesReadAccess", "Categoria Read"])
+.WithName("GetCategorias");
+
+app.MapGet("/categorias/{id}", (DataContext context, int id) =>
+{
+    var categoria = context.Categorias.Find(id);
+    return categoria;
+})
+.RequireAuthorization(["ClientesReadAccess", "Clientes"])
+.WithName("GetCategoriaById");
+
+app.MapDelete("/categorias/{id}", (DataContext context, int id) =>
+{
+    var categoria = context.Categorias.Find(id);
+    if (categoria is null)
+    {
+        return Results.NotFound();
+    }
+
+    context.Categorias.Remove(categoria);
+    context.SaveChanges();
+    return Results.Ok(categoria);
+})
+.RequireAuthorization(["ClientesWriteAccess", "Clientes"])
+.WithName("DeleteCategoriaById");
+
+app.MapPost("/categorias", (DataContext context, Categoria categoria) =>
+{
+    context.Categorias.Add(categoria);
+    context.SaveChanges();
+    return categoria;
+})
+.RequireAuthorization(["ClientesWriteAccess", "Clientes"])
+.WithName("CreateCategoria");
+
+app.MapPut("/categorias/{id}", async (DataContext context, int id, Categoria categoria) =>
+{
+    if (categoria.Id != 0 && categoria.Id != id)
+    {
+        return Results.BadRequest();
+    }
+
+    var existing = await context.Categorias.FindAsync(id);
+    if (existing is null)
+    {
+        return Results.NotFound();
+    }
+
+    existing.Nombre = categoria.Nombre;
+
+    await context.SaveChangesAsync();
+    return Results.Ok(existing);
+})
+.RequireAuthorization(["ClientesWriteAccess", "Clientes"])
+.WithName("UpdateCategoria");
+
+app.MapMethods("/categorias/{id}", new[] { "PATCH" }, async (DataContext context, int id, CategoriaPatch patch) =>
+{
+    var categoria = await context.Categorias.FindAsync(id);
+    if (categoria is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (patch.Nombre is not null)
+    {
+        categoria.Nombre = patch.Nombre;
+    }
+
+    await context.SaveChangesAsync();
+    return Results.Ok(categoria);
+})
+.RequireAuthorization(["ClientesWriteAccess", "Clientes"])
+.WithName("PatchCategoria");
+
 app.Run();
 
 record ClientePatch(string? Nombre, string? Email, string? Domicilio, string? CodigoPostal, string? RFC);
+record CategoriaPatch(string? Nombre);
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
