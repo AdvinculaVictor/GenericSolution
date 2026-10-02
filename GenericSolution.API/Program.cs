@@ -120,6 +120,41 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/health/database", async (DataContext context, CancellationToken cancellationToken) =>
+{
+    const int maxAttempts = 3;
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        using var attemptTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        attemptTimeout.CancelAfter(TimeSpan.FromSeconds(30));
+
+        try
+        {
+            if (await context.Database.CanConnectAsync(attemptTimeout.Token))
+            {
+                return Results.Ok(new { status = "Healthy", database = "Connected" });
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception)
+        {
+        }
+
+        if (attempt < maxAttempts)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(attempt * 2), cancellationToken);
+        }
+    }
+
+    return Results.Json(new { status = "Unhealthy", database = "Unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+})
+    .AllowAnonymous()
+    .WithName("DatabaseHealth")
+    .WithSummary("Checks database connectivity");
+
 var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
